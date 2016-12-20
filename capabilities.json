@@ -1,0 +1,303 @@
+{
+    "dataRoles": [
+        {
+            "displayName": "Axis",
+            "name": "Category",
+            "kind": "Grouping"
+        },
+        {
+            "displayName": "Open",
+            "name": "open",
+            "kind": "Measure"
+        },
+        {
+            "displayName": "Close",
+            "name": "close",
+            "kind": "Measure"
+        },
+        {
+            "displayName": "High",
+            "name": "high",
+            "kind": "Measure"
+        },
+        {
+            "displayName": "Low",
+            "name": "low",
+            "kind": "Measure"
+        },
+        {
+            "displayName": "Trend Lines",
+            "name": "trends",
+            "kind": "Measure"
+        }
+    ],
+    "dataViewMappings": [
+        {
+            "conditions": [
+                { "open": { "max": 1 }, "close": { "max": 1 }, "high": { "max": 1 }, "low": { "max": 1 } }
+            ],
+            "categorical": {
+                "categories": {
+                    "for": {
+                        "in": "Category"
+                    }
+                },
+                "values": {
+                    "select":[
+                        { "bind": { "to": "open" } },
+                        { "bind": { "to": "close" } },
+                        { "bind": { "to": "high" } },
+                        { "bind": { "to": "low" } },
+                        { "bind": { "to": "trends" } }
+                    ]
+                }
+            
+            }
+        }
+    ],
+    "objects": {
+        "dataPoint": {
+            "displayName": "Data Colors",
+            "properties": {
+                "highLowCaps": {
+                    "displayName": "High/Low caps",
+                    "type": {
+                        "bool": true
+                    }
+                },
+                "showShadowsColor": {
+                    "displayName": "Borders",
+                    "type": {
+                        "bool": true
+                    }
+                },
+                "shadowsFill": {
+                   "displayName": "Borders color",
+                   "type": {
+                       "fill": {
+                            "solid": {
+                                "color": true
+                            }
+                        }
+                   }
+               },
+               "bullishFill": {
+                   "displayName": "Bullish color",
+                   "type": {
+                       "fill": {
+                            "solid": {
+                                "color": true
+                            }
+                        }
+                   }
+               },
+               "bearishFill": {
+                   "displayName": "Bearish color",
+                   "type": {
+                       "fill": {
+                            "solid": {
+                                "color": true
+                            }
+                        }
+                   }
+               }
+            }
+        },
+        "trendLines": {
+            "displayName": "Trend lines",
+            "properties": {
+                "weight": {
+                    "displayName": "Weight",
+                    "type": {
+                       "numeric": true
+                   }
+                },
+                "interpolation": {
+                     "displayName": "Appearance",
+                     "type": {
+                         "enumeration": [
+                            {
+                                "displayName": "Straight",
+                                "value": "linear"
+                            },
+                            {
+                                "displayName": "Monotone",
+                                "value": "monotone"
+                            },
+                            {
+                                "displayName": "Smooth",
+                                "value": "cardinal"
+                            }
+                         ]
+                     }
+                 },
+                "fill": {
+                   "displayName": "Color",
+                   "type": {
+                       "fill": {
+                            "solid": {
+                                "color": true
+                            }
+                        }
+                   }
+               }
+            }
+        },
+        "xAxis": {
+            "displayName": "X-Axis",
+            "properties": {
+                "show": {
+                    "displayName": "Show",
+                    "type": {
+                        "bool": true
+                    }
+                },
+                "gridline": {
+                    "displayName": "Gridline",
+                    "type": {
+                        "bool": true
+                    }
+                },
+                "type": {
+                    "displayName": "Type",
+                    "type": {
+                        "enumeration": [
+                            {
+                                "displayName": "Continuous",
+                                "value": "continuous"
+                            },
+                             {
+                                "displayName": "Categorical",
+                                "value": "categorical"
+                            }
+                        ]
+                    }
+                },
+                "fill": {
+                    "displayName": "Color",
+                    "type": {
+                        "fill": {
+                            "solid": {
+                                "color": true
+                            }
+                        }
+                    }
+                }
+            }
+        },
+
+        "yAxis": {
+            "displayName": "Y-Axis",
+            "properties": {
+                "show": {
+                    "displayName": "Show",
+                    "type": {
+                        "bool": true
+                    }
+                },
+                "start": {
+                   "displayName": "Start",
+                   "placeHolderText": "Auto",
+                   "type": {
+                       "numeric": true
+                   }
+                },
+                "end": {
+                   "displayName": "End",
+                   "placeHolderText": "Auto",
+                   "type": {
+                       "numeric": true
+                   }
+                },
+                "fill": {
+                    "displayName": "Color",
+                    "type": {
+                        "fill": {
+                            "solid": {
+                                "color": true
+                            }
+                        }
+                    }
+                }, 
+                "unit": {
+                   "displayName": "Display unit",
+                   "type": {
+                       "formatting": {
+                            "labelDisplayUnits": true
+                        }
+                   }
+                }, 
+                "precision": {
+                   "displayName": "Decimal places",
+                   "placeHolderText": "Auto",
+                   "type": {
+                       "numeric": true
+                   }
+                }
+            }
+        },
+
+        "colorBlind": {
+            "displayName": "Color Blindness by OKViz",
+            "properties": {
+                "vision": {
+                    "displayName" : "Vision",
+                    "type": {
+                         "enumeration": [
+                            {
+                                "displayName": "Normal",
+                                "value": "Normal"
+                            },
+                             {
+                                "displayName": "Protanopia",
+                                "value": "Protanopia"
+                            },
+                             {
+                                "displayName": "Protanomaly",
+                                "value": "Protanomaly"
+                            },
+                             {
+                                "displayName": "Deuteranopia",
+                                "value": "Deuteranopia"
+                            },
+                             {
+                                "displayName": "Deuteranomaly",
+                                "value": "Deuteranomaly"
+                            },
+                            {
+                                "displayName": "Tritanopia",
+                                "value": "Tritanopia"
+                            },
+                            {
+                                "displayName": "Tritanomaly",
+                                "value": "Tritanomaly"
+                            },
+                            {
+                                "displayName": "Achromatopsia",
+                                "value": "Achromatopsia"
+                            },
+                            {
+                                "displayName": "Achromatomaly",
+                                "value": "Achromatomaly"
+                            },
+                            {
+                                "displayName": "Low Contrast",
+                                "value": "LowContrast"
+                            }
+                         ]
+                     }
+                }
+            }
+        },
+        "t": { "properties": { "u": { "type": { "text": true } } } }
+    },
+    "sorting": {
+        "default": {}
+    },
+    "drilldown": {
+        "roles":
+        [
+            "Category"
+        ]
+    }
+}
