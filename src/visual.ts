@@ -1,6 +1,5 @@
 /*
  *  Candlestick by OKViz
- *  v1.0.0
  *
  *  Copyright (c) SQLBI. OKViz is a trademark of SQLBI Corp.
  *  All rights reserved.
@@ -25,11 +24,22 @@
  *  THE SOFTWARE.
  */
 
+import tooltip = powerbi.extensibility.utils.tooltip;
+import TooltipEnabledDataPoint = powerbi.extensibility.utils.tooltip.TooltipEnabledDataPoint;
+import TooltipEventArgs = powerbi.extensibility.utils.tooltip.TooltipEventArgs;
+
 module powerbi.extensibility.visual {
     
+     interface VisualMeta {
+        name: string;
+        version: string;
+        dev: boolean;
+    }
+
     interface VisualViewModel {
         dataPoints: VisualDataPoint[];
         trendsDataPoints: AccessoryDataPoint[];
+        legendDataPoints: LegendDataPoint[];
         domain: VisualDomain;
         settings: VisualSettings;
     }
@@ -84,6 +94,14 @@ module powerbi.extensibility.visual {
             unit?: number;
             precision?: number; 
         };
+        legend: {
+            show: boolean;
+            position: string;
+            showTitle: boolean;
+            titleText: string;
+            labelColor: Fill;
+            fontSize: number;
+        };
 
         colorBlind?: {
             vision?: string;
@@ -114,6 +132,14 @@ module powerbi.extensibility.visual {
                show: true,
                fill: {solid: { color: "#777" } },
                unit: 0
+            },
+            legend: {
+                show: false,
+                position: 'Top',
+                showTitle: false,
+                titleText: '',
+                labelColor: {solid: { color: "#666" } },
+                fontSize: 8
             },
 
             colorBlind: {
@@ -160,6 +186,14 @@ module powerbi.extensibility.visual {
                     unit: getValue<number>(objects, "yAxis", "unit", settings.yAxis.unit),
                     precision: getValue<number>(objects, "yAxis", "precision", settings.yAxis.precision)
                 },
+                legend: {
+                    show: getValue<boolean>(objects, "legend", "show", settings.legend.show),
+                    position: getValue<string>(objects, "legend", "position", settings.legend.position),
+                    showTitle: getValue<boolean>(objects, "legend", "showTitle", settings.legend.showTitle),
+                    titleText: getValue<string>(objects, "legend", "titleText", settings.legend.titleText),
+                    labelColor: getValue<Fill>(objects, "legend", "labelColor", settings.legend.labelColor),
+                    fontSize: getValue<number>(objects, "legend", "fontSize", settings.legend.fontSize)
+                },
 
                 colorBlind: {
                      vision: getValue<string>(objects, "colorBlind", "vision", settings.colorBlind.vision),
@@ -185,8 +219,10 @@ module powerbi.extensibility.visual {
 
         let dataPoints: VisualDataPoint[] = [];
         let trendsDataPoints: AccessoryDataPoint[] = [];
+        let legendDataPoints: LegendDataPoint[] = [];
 
         if (hasCategoricalData) {
+
             let dataCategorical = dataViews[0].categorical;
             let category = (dataCategorical.categories ? dataCategorical.categories[0] : null);
             let categories = (category ? category.values : ['']);
@@ -233,6 +269,7 @@ module powerbi.extensibility.visual {
                                     displayName: dataValue.source.displayName,
                                     value: formattedValue
                                 });
+
                             }
                         }
                     }
@@ -253,11 +290,23 @@ module powerbi.extensibility.visual {
 
                                 let color = getValue<Fill>(dataValue.source.objects, 'trendLines', 'fill', defaultColor).solid.color;
 
+                                let identity = host.createSelectionIdBuilder().withMeasure(dataValue.source.queryName).createSelectionId();
+
                                 trendsDataPoints[displayName] = {
                                     points: [{"x": categoryValue, "y": value}],
                                     color: color,
-                                    selectionId: host.createSelectionIdBuilder().withMeasure(dataValue.source.queryName).createSelectionId()
+                                    selectionId: identity
                                 };
+
+                                if (i == 0) {
+                                    legendDataPoints.push({
+                                        label: dataValue.source.displayName,
+                                        color: color,
+                                        icon: LegendIcon.Circle,
+                                        identity: identity,
+                                        selected: false
+                                    });
+                                }
                             }
 
                             
@@ -269,7 +318,6 @@ module powerbi.extensibility.visual {
 
                      dataPoint.tooltips.unshift(<VisualTooltipDataItem>{
                         displayName: (category.source.displayName || "Axis"),
-                        color: '#333',
                         value: dataPoint.category
                     });
 
@@ -284,38 +332,50 @@ module powerbi.extensibility.visual {
         if (domain.start > domain.end) 
             domain.end = domain.start;
 
+        
         return {
             dataPoints: dataPoints,
             trendsDataPoints: trendsDataPoints,
+            legendDataPoints: legendDataPoints,
             domain: domain,
             settings: settings,
         };
     }
 
     export class Visual implements IVisual {
+        private meta: VisualMeta;
         private host: IVisualHost;
         private selectionManager: ISelectionManager;
         private selectionIdBuilder: ISelectionIdBuilder;
-        private tooltipServiceWrapper: ITooltipServiceWrapper;
+        private tooltipServiceWrapper: tooltip.ITooltipServiceWrapper;
         private model: VisualViewModel;
+        private legend: ILegend;
 
         private element: d3.Selection<HTMLElement>;
 
         constructor(options: VisualConstructorOptions) {
 
+            this.meta = {
+                name: 'Candlestick',
+                version: '1.0.1',
+                dev: false
+            };
+            console.log('%c' + this.meta.name + ' by OKViz ' + this.meta.version + (this.meta.dev ? ' (BETA)' : ''), 'font-weight:bold');
+
             this.host = options.host;
             this.selectionIdBuilder = options.host.createSelectionIdBuilder();
             this.selectionManager = options.host.createSelectionManager();
-            this.tooltipServiceWrapper = createTooltipServiceWrapper(options.host.tooltipService, options.element);
-            this.model = { dataPoints: [], trendsDataPoints: [], domain: {startForced: false, endForced: false}, settings: <VisualSettings>{} };
+            this.tooltipServiceWrapper = tooltip.createTooltipServiceWrapper(options.host.tooltipService, options.element);
+            this.model = { dataPoints: [], trendsDataPoints: [], legendDataPoints: [], domain: {startForced: false, endForced: false}, settings: <VisualSettings>{} };
 
             this.element = d3.select(options.element);
+            this.legend = LegendModule.createLegend($(options.element), false, null, true, LegendPosition.Top);
         }
         
         public update(options: VisualUpdateOptions) {
 
             this.model = visualTransform(options, this.host);
-            this.element.selectAll('div, svg').remove();
+            this.element.selectAll('div, svg:not(.legend)').remove();
             if (this.model.dataPoints.length == 0) return;
 
             let selectionManager  = this.selectionManager;
@@ -343,6 +403,24 @@ module powerbi.extensibility.visual {
                 
             }
 
+            //Legend
+            if (this.model.settings.legend.show && this.model.legendDataPoints.length > 0) {
+        
+                this.legend.changeOrientation(<any>LegendPosition[this.model.settings.legend.position]);
+                this.legend.drawLegend(<LegendData>{
+                    title: this.model.settings.legend.titleText,
+                    dataPoints: this.model.legendDataPoints,
+                    labelColor: this.model.settings.legend.labelColor.solid.color,
+                    fontSize: this.model.settings.legend.fontSize
+                }, options.viewport);
+
+                appendLegendMargins(this.legend, margin);
+  
+            } else {
+
+                this.legend.drawLegend({ dataPoints: [] }, options.viewport);
+            }
+
             let pointMargin = 5;
             let axisPadding = 10;
             
@@ -356,6 +434,7 @@ module powerbi.extensibility.visual {
             let ray = Math.max(1.5, Math.min(6, (containerSize.width / this.model.dataPoints.length / 6)));
             let axisMargin = (containerSize.width * 0.05);
 
+            
             let container =  this.element
                 .append('div')
                 .classed('chart', true)
@@ -559,8 +638,7 @@ module powerbi.extensibility.visual {
                         return dataPoint.tooltips;
                     
                     return null;
-                }, 
-                (tooltipEvent: TooltipEventArgs<number>) => null
+                }
             );
 
             //Trend lines
@@ -580,9 +658,9 @@ module powerbi.extensibility.visual {
                     .attr('fill', 'none');
             }
 
-            OKVizUtility.t(['Candlestick', '1.0.0'], this.element, options, this.host, {
+            OKVizUtility.t([this.meta.name, this.meta.version], this.element, options, this.host, {
                 'cd1': this.model.settings.colorBlind.vision,
-                'cd6': false, //TODO Change when Legend will be available
+                'cd6': this.model.settings.legend.show,
                 'cd11': (this.model.trendsDataPoints.length > 0)
             });
 
@@ -697,6 +775,23 @@ module powerbi.extensibility.visual {
 
                     }
 
+                    break;
+
+                case 'legend':
+                    if (this.model.trendsDataPoints.length > 0) {
+                        objectEnumeration.push({
+                            objectName: objectName,
+                            properties: {
+                                "show": this.model.settings.legend.show,
+                                "position": this.model.settings.legend.position,
+                                "showTitle": this.model.settings.legend.showTitle,
+                                "titleText": this.model.settings.legend.titleText,
+                                "labelColor": this.model.settings.legend.labelColor,
+                                "fontSize": this.model.settings.legend.fontSize
+                            },
+                            selector: null
+                        });
+                    }
                     break;
                 
                 case 'colorBlind':

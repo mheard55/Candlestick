@@ -13,7 +13,7 @@ module powerbi.extensibility.visual.PBI_CV_886A053E_9DFD_4EA0_A47D_CCAEB89AF969 
             selection: d3.Selection<Element>,
             getTooltipInfoDelegate: (args: TooltipEventArgs<T>) => VisualTooltipDataItem[],
             getDataPointIdentity: (args: TooltipEventArgs<T>) => ISelectionId,
-            reloadTooltipDataOnMouseMove?: boolean): void;
+            reloadTooltipDataOnMouseMove?: boolean, forceShow?: boolean): void;
         hide(): void;
     }
 
@@ -39,14 +39,14 @@ module powerbi.extensibility.visual.PBI_CV_886A053E_9DFD_4EA0_A47D_CCAEB89AF969 
             selection: d3.Selection<Element>,
             getTooltipInfoDelegate: (args: TooltipEventArgs<T>) => VisualTooltipDataItem[],
             getDataPointIdentity: (args: TooltipEventArgs<T>) => ISelectionId,
-            reloadTooltipDataOnMouseMove?: boolean): void {
+            reloadTooltipDataOnMouseMove?: boolean, forceShow?: boolean): void {
             
             if (!selection || !this.visualHostTooltipService.enabled()) {
                 return;
             }
             
             let rootNode = this.rootElement;
-
+            
             // Mouse events
             selection.on("mouseover.tooltip", () => {
                 // Ignore mouseover while handling touch events
@@ -70,6 +70,8 @@ module powerbi.extensibility.visual.PBI_CV_886A053E_9DFD_4EA0_A47D_CCAEB89AF969 
                     identities: selectionId ? [selectionId] : [],
                 });
             });
+            if (forceShow)
+               selection.on("mouseover.tooltip").call(selection.node(), selection.datum());
 
             selection.on("mouseout.tooltip", () => {
                 this.visualHostTooltipService.hide({
@@ -77,7 +79,7 @@ module powerbi.extensibility.visual.PBI_CV_886A053E_9DFD_4EA0_A47D_CCAEB89AF969 
                     immediately: false,
                 });
             });
-
+            
             selection.on("mousemove.tooltip", () => {
                 // Ignore mousemove while handling touch events
                 if (!this.canDisplayTooltip(d3.event))
