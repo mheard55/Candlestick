@@ -15192,7 +15192,11 @@ var powerbi;
                         element.selectAll('#visionFilter').remove();
                         element.append('svg')
                             .attr('id', 'visionFilter')
-                            .style('position', 'absolute')
+                            .style({
+                            'position': 'absolute',
+                            'width': 0,
+                            'height': 0
+                        })
                             .html(visionDefs);
                         element.style({
                             'filter': 'url(#vision' + vision + ')',
@@ -15446,7 +15450,7 @@ var powerbi;
                     function Visual(options) {
                         this.meta = {
                             name: 'Candlestick',
-                            version: '1.0.1',
+                            version: '1.0.2',
                             dev: false
                         };
                         console.log('%c' + this.meta.name + ' by OKViz ' + this.meta.version + (this.meta.dev ? ' (BETA)' : ''), 'font-weight:bold');
@@ -15683,7 +15687,8 @@ var powerbi;
                         PBI_CV_886A053E_9DFD_4EA0_A47D_CCAEB89AF969.OKVizUtility.t([this.meta.name, this.meta.version], this.element, options, this.host, {
                             'cd1': this.model.settings.colorBlind.vision,
                             'cd6': this.model.settings.legend.show,
-                            'cd11': (this.model.trendsDataPoints.length > 0)
+                            'cd11': (this.model.trendsDataPoints.length > 0),
+                            'cd15': this.meta.dev
                         });
                         //Color Blind module
                         PBI_CV_886A053E_9DFD_4EA0_A47D_CCAEB89AF969.OKVizUtility.applyColorBlindVision(this.model.settings.colorBlind.vision, this.element);
@@ -15823,7 +15828,7 @@ var powerbi;
                 name: 'PBI_CV_886A053E_9DFD_4EA0_A47D_CCAEB89AF969',
                 displayName: 'Candlestick by OKViz',
                 class: 'Visual',
-                version: '1.0.1',
+                version: '1.0.2',
                 apiVersion: '1.5.0',
                 create: function (options) { return new powerbi.extensibility.visual.PBI_CV_886A053E_9DFD_4EA0_A47D_CCAEB89AF969.Visual(options); },
                 custom: true

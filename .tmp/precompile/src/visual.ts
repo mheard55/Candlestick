@@ -357,7 +357,7 @@ module powerbi.extensibility.visual.PBI_CV_886A053E_9DFD_4EA0_A47D_CCAEB89AF969 
 
             this.meta = {
                 name: 'Candlestick',
-                version: '1.0.1',
+                version: '1.0.2',
                 dev: false
             };
             console.log('%c' + this.meta.name + ' by OKViz ' + this.meta.version + (this.meta.dev ? ' (BETA)' : ''), 'font-weight:bold');
@@ -661,7 +661,8 @@ module powerbi.extensibility.visual.PBI_CV_886A053E_9DFD_4EA0_A47D_CCAEB89AF969 
             OKVizUtility.t([this.meta.name, this.meta.version], this.element, options, this.host, {
                 'cd1': this.model.settings.colorBlind.vision,
                 'cd6': this.model.settings.legend.show,
-                'cd11': (this.model.trendsDataPoints.length > 0)
+                'cd11': (this.model.trendsDataPoints.length > 0),
+                'cd15': this.meta.dev
             });
 
             //Color Blind module
