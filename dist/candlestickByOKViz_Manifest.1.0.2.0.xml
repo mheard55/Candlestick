@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ContentApp">
+  <Id>4F51D54E-3B24-463C-9FB8-504112A768D3</Id>
+  <Version>1.0.2.0</Version>
+  <ProviderName>OKViz - a trademark of SQLBI</ProviderName>
+  <DefaultLocale>en-US</DefaultLocale>
+  <DisplayName DefaultValue="Candlestick by OKViz"/>
+  <Description DefaultValue="Candlestick by OKViz is used to describe price movements of a security, derivative, or currency. Eac"/>
+  <IconUrl DefaultValue="https://visuals.azureedge.net/app-store/PowerBI_icon32x32.png"/>
+  <SupportUrl DefaultValue="http://okviz.com/candlestick/"/>
+  <Requirements>
+    <Sets>
+      <Set Name="DataAnalytics.PowerBI" MinVersion="1.1"/>
+    </Sets>
+  </Requirements>
+  <DefaultSettings>
+    <SourceLocation DefaultValue="https://visuals.azureedge.net/app-store/candlestickByOKViz.1.0.2.0.pbiviz"/>
+    <RequestedWidth>100</RequestedWidth>
+    <RequestedHeight>100</RequestedHeight>
+  </DefaultSettings>
+  <Permissions>ReadWriteDocument</Permissions>
+</OfficeApp>
