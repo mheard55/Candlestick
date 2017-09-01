@@ -4,12 +4,12 @@
     "displayName": "Candlestick by OKViz",
     "guid": "PBI_CV_886A053E_9DFD_4EA0_A47D_CCAEB89AF969",
     "visualClassName": "Visual",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "description": "Candlestick by OKViz is used to describe price movements of a security, derivative, or currency. Each candle in the chart typically shows four price values: high, low, open, and close. This visual allows you to define multiple trend lines for analysis purposes, such as the Bollinger Bands.",
     "supportUrl": "http://okviz.com/candlestick/",
     "gitHubUrl": "https://github.com/okviz/candlestick"
   },
-  "apiVersion": "1.5.0",
+  "apiVersion": "1.7.0",
   "author": {
     "name": "OKViz - a trademark of SQLBI",
     "email": "support@okviz.com"
@@ -20,9 +20,8 @@
   "externalJS": [
     "node_modules/jquery/dist/jquery.min.js",
     "node_modules/d3/d3.min.js",
-    "node_modules/lodash/lodash.min.js",
     "node_modules/globalize/lib/globalize.js",
-    "node_modules/globalize/lib/cultures/globalize.culture.en-US.js",
+    "node_modules/globalize/lib/cultures/globalize.cultures.js",
     "node_modules/powerbi-visuals-utils-typeutils/lib/index.js",
     "node_modules/powerbi-visuals-utils-svgutils/lib/index.js",
     "node_modules/powerbi-visuals-utils-dataviewutils/lib/index.js",

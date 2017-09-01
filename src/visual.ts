@@ -41,6 +41,8 @@ module powerbi.extensibility.visual {
         trendsDataPoints: AccessoryDataPoint[];
         legendDataPoints: LegendDataPoint[];
         domain: VisualDomain;
+        categoryIsDate: boolean;
+        categoryFormat: string;
         settings: VisualSettings;
     }
 
@@ -84,12 +86,16 @@ module powerbi.extensibility.visual {
             show: boolean;
             gridline: boolean;
             type: string,
+            fontFamily: string,
+            fontSize: number,
             fill: Fill;
         };
         yAxis : {
             show: boolean;
             start?: number,
             end?: number,
+            fontFamily: string,
+            fontSize: number,
             fill: Fill;
             unit?: number;
             precision?: number; 
@@ -125,11 +131,15 @@ module powerbi.extensibility.visual {
             xAxis: {
                 show: true,
                 gridline: true,
-                type: "continuous",
+                type: "categorical",
+                fontFamily: "\"Segoe UI\", wf_segoe-ui_normal, helvetica, arial, sans-serif",
+                fontSize: 8,
                 fill: {solid: { color: "#777" } }
            },
            yAxis: {
                show: true,
+               fontFamily: "\"Segoe UI\", wf_segoe-ui_normal, helvetica, arial, sans-serif",
+               fontSize: 8,
                fill: {solid: { color: "#777" } },
                unit: 0
             },
@@ -176,12 +186,16 @@ module powerbi.extensibility.visual {
                     show: getValue<boolean>(objects, "xAxis", "show", settings.xAxis.show),
                     gridline: getValue<boolean>(objects, "xAxis", "gridline", settings.xAxis.gridline),
                     type: getValue<string>(objects, "xAxis", "type", settings.xAxis.type),
+                    fontFamily: getValue<string>(objects, "xAxis", "fontFamily", settings.xAxis.fontFamily),
+                    fontSize: getValue<number>(objects, "xAxis", "fontSize", settings.xAxis.fontSize),
                     fill: getValue<Fill>(objects, "xAxis", "fill", settings.xAxis.fill)
                 },
                 yAxis: {
                     show: getValue<boolean>(objects, "yAxis", "show", settings.yAxis.show),
                     start: getValue<number>(objects, "yAxis", "start", settings.yAxis.start),
                     end: getValue<number>(objects, "yAxis", "end", settings.yAxis.end),
+                    fontFamily: getValue<string>(objects, "yAxis", "fontFamily", settings.yAxis.fontFamily),
+                    fontSize: getValue<number>(objects, "yAxis", "fontSize", settings.yAxis.fontSize),
                     fill: getValue<Fill>(objects, "yAxis", "fill", settings.yAxis.fill),
                     unit: getValue<number>(objects, "yAxis", "unit", settings.yAxis.unit),
                     precision: getValue<number>(objects, "yAxis", "precision", settings.yAxis.precision)
@@ -220,15 +234,22 @@ module powerbi.extensibility.visual {
         let dataPoints: VisualDataPoint[] = [];
         let trendsDataPoints: AccessoryDataPoint[] = [];
         let legendDataPoints: LegendDataPoint[] = [];
+        let categoryIsDate = false;
+        let categoryFormat = '';
 
         if (hasCategoricalData) {
 
             let dataCategorical = dataViews[0].categorical;
-            let category = (dataCategorical.categories ? dataCategorical.categories[0] : null);
+            let category = (dataCategorical.categories ? dataCategorical.categories[dataCategorical.categories.length - 1] : null);
+            if (category) {
+                categoryIsDate = category.source.type.dateTime;
+                categoryFormat = category.source.format;
+            }
             let categories = (category ? category.values : ['']);
 
             for (let i = 0; i < categories.length; i++) {
 
+                
                 let categoryValue = OKVizUtility.makeMeasureReadable(categories[i]);
                 let dataPoint: VisualDataPoint;
 
@@ -262,7 +283,8 @@ module powerbi.extensibility.visual {
                                 let formattedValue = OKVizUtility.Formatter.format(value, {
                                     format: dataValue.source.format,
                                     formatSingleValues: true,
-                                    allowFormatBeautification: false
+                                    allowFormatBeautification: false,
+                                    cultureSelector: host.locale
                                 });
                                 
                                 dataPoint.tooltips.push(<VisualTooltipDataItem>{
@@ -332,11 +354,12 @@ module powerbi.extensibility.visual {
         if (domain.start > domain.end) 
             domain.end = domain.start;
 
-        
         return {
             dataPoints: dataPoints,
             trendsDataPoints: trendsDataPoints,
             legendDataPoints: legendDataPoints,
+            categoryIsDate: categoryIsDate,
+            categoryFormat: categoryFormat,
             domain: domain,
             settings: settings,
         };
@@ -357,7 +380,7 @@ module powerbi.extensibility.visual {
 
             this.meta = {
                 name: 'Candlestick',
-                version: '1.0.2',
+                version: '1.0.3',
                 dev: false
             };
             console.log('%c' + this.meta.name + ' by OKViz ' + this.meta.version + (this.meta.dev ? ' (BETA)' : ''), 'font-weight:bold');
@@ -366,10 +389,10 @@ module powerbi.extensibility.visual {
             this.selectionIdBuilder = options.host.createSelectionIdBuilder();
             this.selectionManager = options.host.createSelectionManager();
             this.tooltipServiceWrapper = tooltip.createTooltipServiceWrapper(options.host.tooltipService, options.element);
-            this.model = { dataPoints: [], trendsDataPoints: [], legendDataPoints: [], domain: {startForced: false, endForced: false}, settings: <VisualSettings>{} };
+            this.model = { dataPoints: [], trendsDataPoints: [], legendDataPoints: [], categoryIsDate: false, categoryFormat: '', domain: {startForced: false, endForced: false}, settings: <VisualSettings>{} };
 
             this.element = d3.select(options.element);
-            this.legend = LegendModule.createLegend($(options.element), false, null, true, LegendPosition.Top);
+            this.legend = LegendModule.createLegend(options.element, false, null, true, LegendPosition.Top);
         }
         
         public update(options: VisualUpdateOptions) {
@@ -383,22 +406,27 @@ module powerbi.extensibility.visual {
             let margin = {top: 6, left: 6, bottom: 0, right: 6};
             
             let xAxisHeight = 0;
+            let xAxisWidth = 0;
             let yAxisWidth = 0;
+            let yAxisFontSize;
             let yFormatter;
             if (this.model.settings.yAxis.show) {
+                
                 
                 yFormatter = OKVizUtility.Formatter.getFormatter({
                     format: this.model.dataPoints[0].format,
                     value: this.model.settings.yAxis.unit,
                     formatSingleValues: (this.model.settings.yAxis.unit == 0),
                     precision: this.model.settings.yAxis.precision,
-                    displayUnitSystemType: 0
+                    displayUnitSystemType: 0,
+                    cultureSelector: this.host.locale
                 });
 
+                yAxisFontSize = PixelConverter.fromPoint(this.model.settings.yAxis.fontSize);
                 yAxisWidth = TextUtility.measureTextWidth({
-                    fontSize: '11px',
-                    fontFamily: 'sans-serif',
-                    text: yFormatter.format(this.model.domain.end)
+                    fontSize: yAxisFontSize,
+                    fontFamily: this.model.settings.yAxis.fontFamily,
+                    text: (yFormatter ? yFormatter.format(this.model.domain.end) : this.model.domain.end)
                 });
                 
             }
@@ -461,36 +489,49 @@ module powerbi.extensibility.visual {
                     'height': plotSize.height - scrollbarMargin
                 });
 
-                let categoryIsDate = (Object.prototype.toString.call(this.model.dataPoints[0].category) === '[object Date]');
-                
             //X
+            let xAxisDataPoints = this.model.dataPoints.map(function (d) { return d.category; });
             let xRange = [yAxisWidth + axisPadding + axisMargin, plotSize.width - axisMargin];
             let x;
-            let xFormatter;
+
             let xIsCategorical = (this.model.settings.xAxis.type === 'categorical');
-            if (categoryIsDate && !xIsCategorical) {
+            if (this.model.categoryIsDate && !xIsCategorical) {
 
                 let dateRange = d3.extent(this.model.dataPoints, function (d) { return d.category; });
-                xFormatter = OKVizUtility.Formatter.getAxisDatesFormatter(dateRange[0], dateRange[1]);
 
                 x = d3.time.scale().range(xRange)
                     .domain(dateRange);
             } else {
-                if (categoryIsDate)
-                    xFormatter = d3.time.format('%x');
 
                 x = d3.scale.ordinal().rangePoints(<any>xRange)
-                    .domain(this.model.dataPoints.map(function (d) { return d.category; }))
+                    .domain(xAxisDataPoints)
             
             }
 
             if (this.model.settings.xAxis.show) {
                 
-                let numTicks = (this.model.settings.xAxis.type == 'categorical' || !categoryIsDate ? this.model.dataPoints.length :  (categoryIsDate ? 4 : Math.max(Math.floor((plotSize.width) / 80), 2)));
+                let longestXAxis = xAxisDataPoints.sort(function (a, b) { return b.length - a.length; })[0];
+
+                let xAxisFontSize = PixelConverter.fromPoint(this.model.settings.xAxis.fontSize);
+                xAxisWidth = TextUtility.measureTextWidth({
+                    fontSize: xAxisFontSize,
+                    fontFamily: this.model.settings.xAxis.fontFamily,
+                    text: longestXAxis
+                });              
+
+                let numTicks = (this.model.settings.xAxis.type == 'categorical' || !this.model.categoryIsDate ? this.model.dataPoints.length :  (this.model.categoryIsDate ? 4 : Math.max(Math.floor((plotSize.width) / 80), 2)));
 
                 let xAxis = d3.svg.axis().ticks(numTicks).outerTickSize(0).orient('bottom');
-                if (xFormatter) xAxis.tickFormat(xFormatter);
-
+                if (this.model.categoryIsDate) {
+                    let xFormatter = OKVizUtility.Formatter.getFormatter({
+                        format: this.model.categoryFormat,
+                        formatSingleValues: false,
+                        detectAxisPrecision: true,
+                        tickCount: numTicks,
+                        cultureSelector: this.host.locale
+                    });
+                    xAxis.tickFormat(d => xFormatter.format(d));
+                }
 
                 let svgAxisContainer = svgContainer
                     .append('svg')
@@ -503,24 +544,27 @@ module powerbi.extensibility.visual {
                 axis.call(xAxis.scale(x));
                 //axis.selectAll('line').style('stroke', this.model.settings.xAxis.fill.solid.color);
                 let labels = axis.selectAll('text')
-                    .style('fill', this.model.settings.xAxis.fill.solid.color);
-
+                    .style({
+                        'fill': this.model.settings.xAxis.fill.solid.color,
+                        'font-family': this.model.settings.xAxis.fontFamily,
+                        'font-size': xAxisFontSize
+                    });
 
                 let computedNumTicks = axis.selectAll('text').size();
                 let tickMaxWidth = ((xRange[1] - xRange[0]) / computedNumTicks);
 
-                if (tickMaxWidth < 20) {
+                if (tickMaxWidth < xAxisWidth * 0.8) {
                     labels.attr("transform", "rotate(-90)").attr('dy', '-0.5em').style("text-anchor", "end")
-                    .call(TextUtility.truncateAxis, plotSize.height * 0.3);
+                    .call(TextUtility.truncateAxis, plotSize.height * 0.3, {fontFamily: this.model.settings.xAxis.fontFamily, fontSize: xAxisFontSize});
 
-                } else if (tickMaxWidth < 45) {
+                } else if (tickMaxWidth < xAxisWidth) {
                     labels.attr("transform", function(d) {
                         return "translate(" + this.getBBox().height*-2 + "," + this.getBBox().height + ")rotate(-35)";
                     }).attr('dy', '0').attr('dx', '2.5em').style("text-anchor", "end")
-                    .call(TextUtility.truncateAxis, plotSize.height * 0.3);
+                    .call(TextUtility.truncateAxis, plotSize.height * 0.3, {fontFamily: this.model.settings.xAxis.fontFamily, fontSize: xAxisFontSize});
                 
                 } else {
-                    labels.call(TextUtility.wrapAxis, tickMaxWidth);
+                    labels.call(TextUtility.wrapAxis, tickMaxWidth, {fontFamily: this.model.settings.xAxis.fontFamily, fontSize: xAxisFontSize});
                 }
 
 
@@ -539,7 +583,7 @@ module powerbi.extensibility.visual {
 
             }
 
-                //Y
+            //Y
             let yRange = [axisPadding + pointMargin,  plotSize.height - axisPadding - scrollbarMargin - 5 - xAxisHeight];
             let y = d3.scale.linear()
                 .domain([this.model.domain.end, this.model.domain.start]) 
@@ -562,7 +606,11 @@ module powerbi.extensibility.visual {
 
                 axis.call(yAxis.scale(y));
                 //axis.selectAll('line').style('stroke', this.model.settings.yAxis.fill.solid.color);
-                axis.selectAll('text').style('fill', this.model.settings.yAxis.fill.solid.color);
+                axis.selectAll('text').style({
+                    'fill': this.model.settings.yAxis.fill.solid.color,
+                    'font-family': this.model.settings.yAxis.fontFamily,
+                    'font-size': yAxisFontSize
+                });
 
             }
 
@@ -598,9 +646,9 @@ module powerbi.extensibility.visual {
                     g.append("line")
                         .style("stroke", shadowsColor)
                         .attr("x1", xPos)
-                        .attr("x2", xPos)
+                        .attr("x2", xPos + 0.0001) //Hack to avoid disappearing in some browsers
                         .attr("y1", y(dataPoint.low))
-                        .attr("y2", y(dataPoint.high));
+                        .attr("y2", y(dataPoint.high) + 0.0001);
 
                     if (this.model.settings.dataPoint.highLowCaps) {
                         g.append("line")
@@ -608,14 +656,14 @@ module powerbi.extensibility.visual {
                             .attr("x1", xPos - ray)
                             .attr("x2", xPos + ray + 1)
                             .attr("y1", y(dataPoint.low))
-                            .attr("y2", y(dataPoint.low));
+                            .attr("y2", y(dataPoint.low) + 0.0001);
 
                         g.append("line")
                             .style("stroke", shadowsColor)
                             .attr("x1", xPos - ray)
                             .attr("x2", xPos + ray + 1)
                             .attr("y1", y(dataPoint.high))
-                            .attr("y2", y(dataPoint.high));
+                            .attr("y2", y(dataPoint.high) + 0.0001);
                     }
 
 
@@ -661,7 +709,7 @@ module powerbi.extensibility.visual {
             OKVizUtility.t([this.meta.name, this.meta.version], this.element, options, this.host, {
                 'cd1': this.model.settings.colorBlind.vision,
                 'cd6': this.model.settings.legend.show,
-                'cd11': (this.model.trendsDataPoints.length > 0),
+                'cd11': (this.model.legendDataPoints.length > 0),
                 'cd15': this.meta.dev
             });
 
@@ -679,29 +727,29 @@ module powerbi.extensibility.visual {
 
             switch(objectName) {
                 case 'xAxis':
-                    
+                    if (this.model.categoryIsDate) {
+                        objectEnumeration.push({
+                            objectName: objectName,
+                            properties: {
+                                "type": this.model.settings.xAxis.type
+                            },
+                            selector: null
+                        });
+                    }
+
                     objectEnumeration.push({
                         objectName: objectName,
                         properties: {
                             "show": this.model.settings.xAxis.show,
                             "gridline": this.model.settings.xAxis.gridline,
-                            "fill": this.model.settings.xAxis.fill
+                            "fill": this.model.settings.xAxis.fill,
+                            "fontSize": this.model.settings.xAxis.fontSize,
+                            "fontFamily": this.model.settings.xAxis.fontFamily
                         },
                         selector: null
                     });
 
-                    if (this.model.dataPoints.length > 0) {
-                        let categoryIsDate = (Object.prototype.toString.call(this.model.dataPoints[0].category) === '[object Date]');
-                        if (categoryIsDate) {
-                            objectEnumeration.push({
-                                objectName: objectName,
-                                properties: {
-                                    "type": this.model.settings.xAxis.type
-                                },
-                                selector: null
-                            });
-                        }
-                    }
+                    
 
                     break;
 
@@ -714,6 +762,8 @@ module powerbi.extensibility.visual {
                             "start": this.model.settings.yAxis.start,
                             "end": this.model.settings.yAxis.end,
                             "fill": this.model.settings.yAxis.fill,
+                            "fontSize": this.model.settings.yAxis.fontSize,
+                            "fontFamily": this.model.settings.yAxis.fontFamily,
                             "unit": this.model.settings.yAxis.unit,
                             "precision": this.model.settings.yAxis.precision
                         },
@@ -779,7 +829,8 @@ module powerbi.extensibility.visual {
                     break;
 
                 case 'legend':
-                    if (this.model.trendsDataPoints.length > 0) {
+               
+                    if (this.model.legendDataPoints.length > 0) {
                         objectEnumeration.push({
                             objectName: objectName,
                             properties: {
