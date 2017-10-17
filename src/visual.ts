@@ -126,7 +126,7 @@ module powerbi.extensibility.visual {
             },
             trendLines: {
                 weight: 1,
-                interpolation: 'basis-open'
+                interpolation: 'linear'
             },
             xAxis: {
                 show: true,
